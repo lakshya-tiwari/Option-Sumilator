@@ -15,8 +15,8 @@ from datetime import datetime
 
 
 
-data = pd.read_csv(r'D:\DATA\purchase_data\purchase_intraday_data2016_to_2021.csv')
-data['DateTime'] = data['Date']+' '+data['Time']
+data = pd.read_csv(r'D:\DATA\purchase_data\purchase_intraday_data2019.csv')
+data['DateTime'] = pd.to_datetime(data['Date']+' '+data['Time'])
 data['Date'] = pd.to_datetime(data['Date'])
 data['Expiry'] = pd.to_datetime(data['Expiry'])
 print('Data is ready to Use')
@@ -70,9 +70,7 @@ def get_option_data_for_chart(request):
     option_type = request.GET.get('option_type')
     strike_price = request.GET.get('strike_price')
 
-    start_date = pd.to_datetime(start_date)
-    expiry_date = pd.to_datetime(expiry_date)
-    strike_price = int(strike_price)
+    
 
     option_data = get_option_data_from_csv(start_date, expiry_date, strike_price, option_type)
     
@@ -103,10 +101,14 @@ def get_option_data_for_chart(request):
 
 # Function to get the option price from the CSV based on expiry date
 def get_option_data_from_csv(start_date, expiry_date, strike_price, option_type):
+
+    start_date = pd.to_datetime(start_date)
+    expiry_date = pd.to_datetime(expiry_date)
+    strike_price = int(strike_price)
     filtered_data = None
     try:
         # Filter the dataframe
-        filtered_data = data[(data['Date'] >= start_date) &
+        filtered_data = data[(data['DateTime'] >= start_date) &
                              (data['Expiry'] == expiry_date) &
                              (data['Strike Price'] == strike_price) &
                              (data['Option Type'] == option_type)]
@@ -121,12 +123,12 @@ def get_option_data_from_csv(start_date, expiry_date, strike_price, option_type)
 
 # Function to get available expiry dates based on the selected start date
 def get_expiry_dates_for_start_date(start_date):
-    # expiry_dates = []
+
     try:
         # Read the data from a CSV file (or from database if necessary)
         start_date = pd.to_datetime(start_date)
 
-        Data = data[data['Date']==start_date]
+        Data = data[data['DateTime']==start_date]
         expiry_dates = (Data['Expiry'].sort_values().unique())
         
     except Exception as e:
@@ -137,7 +139,8 @@ def get_expiry_dates_for_start_date(start_date):
 def get_strike_prices_for_start_expiry(start_date, expiry_date, option_type):
     try:
         # Filter data based on start date and expiry date
-        strike_prices = list(data[(data['Date'] == start_date) & (data['Expiry'] == expiry_date) & (data['Option Type'] == option_type)]['Strike Price'].sort_values().unique())
+        start_date = pd.to_datetime(start_date, '%Y-%m-%dT%H:%M')
+        strike_prices = list(data[(data['DateTime'] == start_date) & (data['Expiry'] == expiry_date) & (data['Option Type'] == option_type)]['Strike Price'].sort_values().unique())
 
     except Exception as e:
         print(f"Error retrieving strike prices: {e}")
@@ -160,8 +163,6 @@ def get_expiry_dates(request):
     start_date = request.GET.get('start_date')
 
     if start_date:
-        # Convert start_date from string to date
-        start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
         
         # Get expiry dates filtered by start_date
         expiry_dates = get_expiry_dates_for_start_date(start_date)
